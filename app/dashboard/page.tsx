@@ -1,17 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import {
-  ArrowRight,
-  CalendarDays,
-  ChevronRight,
-  Clock3,
-  FileText,
-  Image as ImageIcon,
-  Plus,
-  Users,
-  UserRound,
-} from "lucide-react";
+import {ArrowRight, CalendarDays, ChevronRight, Clock3, FileText, Image as ImageIcon, Plus, Users } from "lucide-react";
+import Header from "@/components/header";
 
 const stats = [
   {
@@ -71,24 +62,7 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-[#f8f6f0]">
       {/* Header */}
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-[1600px] items-center justify-between px-6 py-5 sm:px-8 lg:px-10">
-          <div>
-            <p className="text-sm font-semibold text-amber-600">
-              WiseGen Admin
-            </p>
-
-            <h1 className="mt-1 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">
-              Dashboard
-            </h1>
-          </div>
-
-          <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-950 text-white">
-            <UserRound size={20} />
-          </div>
-        </div>
-      </header>
-
+      <Header />
       <div className="mx-auto max-w-[1600px] px-6 py-8 sm:px-8 lg:px-10">
         {/* Welcome */}
         <section className="relative overflow-hidden rounded-3xl bg-slate-950 px-6 py-8 sm:px-8 lg:px-10">

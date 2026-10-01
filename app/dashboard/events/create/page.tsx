@@ -1,17 +1,9 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useState } from "react";
+import { ChangeEvent, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  CalendarDays,
-  Clock3,
-  ImagePlus,
-  MapPin,
-  Save,
-  Upload,
-  X,
-} from "lucide-react";
+import {ArrowLeft, CalendarDays, Clock3, ImagePlus, MapPin, Save, Upload, X, } from "lucide-react";
+import axios from "axios";
 
 const categories = [
   "Mentoring",
@@ -31,17 +23,20 @@ export default function CreateEventPage() {
   const [description, setDescription] = useState("");
   const [content, setContent] = useState("");
   const [registrationUrl, setRegistrationUrl] = useState("");
-  const [coverImage, setCoverImage] = useState<string | null>(null);
-  const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [coverImage, setCoverImage] = useState<File | null>(null);
+  const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
+  const [galleryImages, setGalleryImages] = useState<File[]>([]);
+  const [galleryImagePreviews, setGalleryImagePreviews] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string>("");
 
   const handleCoverImage = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
 
     if (!file) return;
 
-    const imageUrl = URL.createObjectURL(file);
-    setCoverImage(imageUrl);
+    setCoverImage(file);
+    setCoverImagePreview(URL.createObjectURL(file));
   };
 
   const handleGalleryImages = (event: ChangeEvent<HTMLInputElement>) => {
@@ -49,48 +44,107 @@ export default function CreateEventPage() {
 
     if (!files.length) return;
 
-    const imageUrls = files.map((file) => URL.createObjectURL(file));
+    const previews = files.map((file) => URL.createObjectURL(file));
 
-    setGalleryImages((current) => [...current, ...imageUrls]);
+    setGalleryImages((current) => [...current, ...files]);
+    setGalleryImagePreviews((current) => [...current, ...previews]);
   };
 
   const removeGalleryImage = (index: number) => {
+    URL.revokeObjectURL(galleryImagePreviews[index]);
+
     setGalleryImages((current) =>
+      current.filter((_, imageIndex) => imageIndex !== index)
+    );
+
+    setGalleryImagePreviews((current) =>
       current.filter((_, imageIndex) => imageIndex !== index)
     );
   };
 
-  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = async () => {
+
+    if (!title){
+      setError("Title is required");
+      return;
+    }
+
+    if (!category){
+      setError("Category is required");
+      return;
+    }
+
+    if (!date){
+      setError("Date is required");
+      return;
+    }
+
+    if (!time){
+      setError("Time is required");
+      return;
+    }
+
+    if (!location){
+      setError("Location is required");
+      return;
+    }
+
+    if (!description){
+      setError("Description is required");
+      return;
+    }
+
+    if (!content){
+      setError("Event detail is required");
+      return;
+    }
+
+    if (!coverImage){
+      setError("Cover Image is required");
+      return;
+    }
+
+    const formData = new FormData();
+
+    formData.append("title", title);
+    formData.append("category", category);
+    formData.append("date", date);
+    formData.append("time", time);
+    formData.append("location", location);
+    formData.append("description", description);
+    formData.append("content", content);
+    formData.append("registrationUrl", registrationUrl);
+
+    if (coverImage) {
+      formData.append("coverImage", coverImage);
+    }
+
+    galleryImages.forEach((file) => {
+      formData.append("galleryImages[]", file);
+    });
+
+    setError("");
 
     setIsSubmitting(true);
 
-    const eventData = {
-      title,
-      category,
-      date,
-      time,
-      location,
-      description,
-      content,
-      registrationUrl,
-      coverImage,
-      galleryImages,
-    };
+    try {
+      const url = "http://localhost:8000/api/create-event";
 
-    console.log("Event data:", eventData);
+      const response = await axios.post(url, formData, {
+        headers: {
+          "Content-Type" : "multipart/form-data"
+        },withCredentials: true
+      })
 
-    // Connect your API here.
-    //
-    // Example:
-    //
-    // await fetch("/api/events", {
-    //   method: "POST",
-    //   headers: {
-    //     "Content-Type": "application/json",
-    //   },
-    //   body: JSON.stringify(eventData),
-    // });
+      if (response.data.status === "success"){
+        window.location.href = "/dashboard/events";
+      } 
+    } catch (error) {
+      if (axios.isAxiosError(error)){
+        console.log(error.response?.data);
+        setError("Failed to create event. Please try again.");
+      }
+    }
 
     setTimeout(() => {
       setIsSubmitting(false);
@@ -127,7 +181,7 @@ export default function CreateEventPage() {
       </header>
 
       <div className="mx-auto max-w-[1400px] px-6 py-8 sm:px-8 lg:px-10">
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={(e) => e.preventDefault()}>
           <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
             {/* Main Form */}
             <div className="space-y-8">
@@ -159,8 +213,7 @@ export default function CreateEventPage() {
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
                       placeholder="e.g. WiseGen Youth Conference"
-                      required
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/10"
+                      className="text-black w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm outline-none transition placeholder:text-slate-400 focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/10"
                     />
                   </div>
 
@@ -177,7 +230,7 @@ export default function CreateEventPage() {
                       id="category"
                       value={category}
                       onChange={(e) => setCategory(e.target.value)}
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm outline-none transition focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/10"
+                      className="text-black w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm outline-none transition focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/10"
                     >
                       {categories.map((item) => (
                         <option key={item} value={item}>
@@ -203,8 +256,7 @@ export default function CreateEventPage() {
                       placeholder="Briefly describe the event..."
                       rows={4}
                       maxLength={300}
-                      required
-                      className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/10"
+                      className="text-black w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm leading-6 outline-none transition placeholder:text-slate-400 focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/10"
                     />
 
                     <p className="mt-1.5 text-right text-xs text-slate-400">
@@ -227,8 +279,7 @@ export default function CreateEventPage() {
                       onChange={(e) => setContent(e.target.value)}
                       placeholder="Write everything visitors should know about this event..."
                       rows={10}
-                      required
-                      className="w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm leading-7 outline-none transition placeholder:text-slate-400 focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/10"
+                      className="text-black w-full resize-y rounded-xl border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm leading-7 outline-none transition placeholder:text-slate-400 focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/10"
                     />
 
                     <p className="mt-2 text-xs leading-5 text-slate-400">
@@ -273,8 +324,7 @@ export default function CreateEventPage() {
                         type="date"
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
-                        required
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm outline-none transition focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/10"
+                        className="text-black w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm outline-none transition focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/10"
                       />
                     </div>
                   </div>
@@ -299,8 +349,7 @@ export default function CreateEventPage() {
                         type="time"
                         value={time}
                         onChange={(e) => setTime(e.target.value)}
-                        required
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm outline-none transition focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/10"
+                        className="text-black w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm outline-none transition focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/10"
                       />
                     </div>
                   </div>
@@ -326,8 +375,7 @@ export default function CreateEventPage() {
                         value={location}
                         onChange={(e) => setLocation(e.target.value)}
                         placeholder="e.g. WiseGen Meeting Venue, Abuja"
-                        required
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/10"
+                        className="text-black w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-11 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-amber-400 focus:bg-white focus:ring-4 focus:ring-amber-400/10"
                       />
                     </div>
                   </div>
@@ -383,7 +431,7 @@ export default function CreateEventPage() {
 
                 <div className="p-6">
                   <div className="grid gap-4 sm:grid-cols-2">
-                    {galleryImages.map((image, index) => (
+                    {galleryImagePreviews.map((image, index) => (
                       <div
                         key={`${image}-${index}`}
                         className="group relative aspect-video overflow-hidden rounded-xl bg-slate-100"
@@ -446,17 +494,24 @@ export default function CreateEventPage() {
                 </div>
 
                 <div className="p-6">
-                  {coverImage ? (
+                  {coverImagePreview ? (
                     <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-slate-100">
                       <img
-                        src={coverImage}
+                        src={coverImagePreview}
                         alt="Event cover preview"
                         className="h-full w-full object-cover"
                       />
 
                       <button
                         type="button"
-                        onClick={() => setCoverImage(null)}
+                        onClick={() => {
+                          if (coverImagePreview) {
+                            URL.revokeObjectURL(coverImagePreview);
+                          }
+
+                          setCoverImage(null);
+                          setCoverImagePreview(null);
+                        }}
                         className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-full bg-slate-950/80 text-white transition hover:bg-red-500"
                       >
                         <X size={17} />
@@ -497,6 +552,10 @@ export default function CreateEventPage() {
                   </h2>
                 </div>
 
+                <div className={`w-full h-max py-2 text-center text-sm bg-red-600 text-white rounded
+                ${error ? "block" : "hidden"}
+                `}>{error}</div>
+
                 <div className="p-6">
                   <div className="rounded-xl bg-amber-50 p-4">
                     <p className="text-sm font-bold text-amber-900">
@@ -511,6 +570,7 @@ export default function CreateEventPage() {
 
                   <button
                     type="submit"
+                    onClick={handleSubmit}
                     disabled={isSubmitting}
                     className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-amber-400 hover:text-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
                   >

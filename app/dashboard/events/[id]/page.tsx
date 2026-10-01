@@ -1,116 +1,76 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowLeft,
-  CalendarDays,
-  Camera,
-  Clock3,
-  Edit3,
-  ImagePlus,
-  MapPin,
-  MoreVertical,
-  Trash2,
-  Users,
-  X,
-} from "lucide-react";
+import {ArrowLeft, CalendarDays, Camera, Clock3, Edit3, ImagePlus, MapPin, Trash2,Users, X,} from "lucide-react";
+import axios from "axios";
+import { useParams } from "next/navigation";
 
-type Event = {
-  id: number;
-  title: string;
-  slug: string;
-  category: string;
-  date: string;
-  time: string;
-  location: string;
-  description: string;
-  content: string;
-  status: "upcoming" | "past";
-  attendees: number;
-  coverImage: string;
-  gallery: string[];
-  registrationUrl?: string;
-};
 
-const events: Event[] = [
-  {
-    id: 1,
-    title: "WiseGen Youth Conference",
-    slug: "wisegen-youth-conference",
-    category: "Youth Conference",
-    date: "October 24, 2026",
-    time: "10:00 AM",
-    location: "Venue to be announced",
-    description:
-      "A special gathering designed to help young people grow in faith, wisdom, character, and purpose.",
-    content:
-      "The WiseGen Youth Conference is a special gathering created to inspire, equip, and encourage teenagers and young adults. Participants will have opportunities to learn, ask questions, connect with others, and explore what it means to live with purpose and faith.",
-    status: "upcoming",
-    attendees: 0,
-    coverImage: "/events/youth-conference.jpg",
-    gallery: [],
-    registrationUrl: "",
-  },
-  {
-    id: 2,
-    title: "Faith & Purpose Conversation",
-    slug: "faith-purpose-conversation",
-    category: "Faith & Growth",
-    date: "November 14, 2026",
-    time: "4:00 PM",
-    location: "Venue to be announced",
-    description:
-      "An interactive conversation about faith, identity, purpose, relationships, and navigating life as a young person.",
-    content:
-      "This conversation will provide a safe and welcoming environment where young people can explore important questions about faith, identity, relationships, purpose, and the future.",
-    status: "upcoming",
-    attendees: 0,
-    coverImage: "/events/faith-purpose.jpg",
-    gallery: [],
-    registrationUrl: "",
-  },
-  {
-    id: 3,
-    title: "WiseGen Mentoring Meeting",
-    slug: "wisegen-mentoring-meeting",
-    category: "Mentoring",
-    date: "May 18, 2026",
-    time: "4:00 PM",
-    location: "WiseGen Meeting Venue",
-    description:
-      "A meaningful time of fellowship, biblical teaching, mentoring, conversations, and practical guidance.",
-    content:
-      "The WiseGen Mentoring Meeting brought young people together for fellowship, biblical teaching, prayer, meaningful conversations, and practical guidance. Participants had the opportunity to connect with mentors and discuss issues that affect their everyday lives.",
-    status: "past",
-    attendees: 28,
-    coverImage: "/events/mentoring-meeting.jpg",
-    gallery: [
-      "/events/gallery/mentoring-1.jpg",
-      "/events/gallery/mentoring-2.jpg",
-      "/events/gallery/mentoring-3.jpg",
-      "/events/gallery/mentoring-4.jpg",
-      "/events/gallery/mentoring-5.jpg",
-      "/events/gallery/mentoring-6.jpg",
-    ],
-    registrationUrl: "",
-  },
-];
+export default function EventDetailsPage() {
 
-export default function EventDetailsPage({
-  params,
-}: {
-  params: { id: string };
-}) {
+  const params = useParams();
+
+  interface Event {
+    id: number;
+    event_id: number;
+    title: string;
+    slug: string;
+    category: string;
+    date: string;
+    time: string;
+    location: string;
+    description: string;
+    short_description: string;
+    status: "upcoming" | "past";
+    attendees: number;
+    image: string;
+    gallery: string[] | null;
+    registrationUrl?: string;
+    photos?: number;
+  }
+
   const [gallery, setGallery] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [events, setEvents] = useState<Event[]>([]);
 
-  /*
-   * For now this uses dummy data.
-   * Replace this with an API request using params.id.
-   */
+  useEffect(() => {
+    async function fetchEvents() {
+      try {
+        const response = await axios.get(
+          "http://localhost:8000/api/events",
+          {
+            withCredentials: true,
+          }
+        );
+
+        console.log(response.data);
+
+        if (response.data.status === "success") {
+          const fetchedEvents: Event[] = response.data.events;
+
+          setEvents(fetchedEvents);
+
+          const currentEvent = fetchedEvents.find(
+            (item) => item.id === Number(params.id)
+          );
+
+          setGallery(currentEvent?.gallery ?? []);
+        }
+      } catch (error) {
+        if (axios.isAxiosError(error)) {
+          console.log(error.response?.data);
+        }
+      }
+    }
+
+    fetchEvents();
+  }, [params.id]);
+  
+
   const event = useMemo(() => {
     return events.find((item) => item.id === Number(params.id));
-  }, [params.id]);
+  }, [events, params.id]);
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -118,18 +78,57 @@ export default function EventDetailsPage({
 
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
-  const allGalleryImages = gallery.length > 0 ? gallery : event?.gallery ?? [];
+  const allGalleryImages = gallery;
 
-  const handleGalleryUpload = (
+  const handleGalleryUpload = async (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
     const files = Array.from(e.target.files || []);
 
     if (!files.length) return;
 
-    const imageUrls = files.map((file) => URL.createObjectURL(file));
+    if (!event) return;
 
-    setGallery((current) => [...current, ...imageUrls]);
+    const formData = new FormData();
+
+    files.forEach((file) => {
+      formData.append("images[]", file);
+    });
+
+    formData.append("event_id", String(event.id));
+
+    try {
+      setUploading(true);
+
+      const response = await axios.post(
+        "http://localhost:8000/api/gallery",
+        formData,
+        {
+          withCredentials: true,
+        }
+      );
+
+      console.log("Gallery upload response:", response.data);
+
+      if (response.data.status === "success") {
+        setGallery((current) => [
+          ...current,
+          ...response.data.images,
+        ]);
+      }
+    } catch (error) {
+      if (axios.isAxiosError(error)) {
+        console.error(
+          "Gallery upload error:",
+          error.response?.data
+        );
+      } else {
+        console.error(error);
+      }
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
   };
 
   const removeGalleryImage = (image: string) => {
@@ -169,7 +168,7 @@ export default function EventDetailsPage({
     <main className="min-h-screen bg-[#f8f6f0]">
       {/* Header */}
       <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-[1400px] px-6 py-6 sm:px-8 lg:px-10">
+        <div className="mx-auto max-w-350 px-6 py-6 sm:px-8 lg:px-10">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <Link
@@ -222,15 +221,15 @@ export default function EventDetailsPage({
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1400px] px-6 py-8 sm:px-8 lg:px-10">
+      <div className="mx-auto max-w-350 px-6 py-8 sm:px-8 lg:px-10">
         <div className="grid gap-8 lg:grid-cols-[1fr_350px]">
           {/* Main Content */}
           <div className="space-y-8">
             {/* Cover Image */}
             <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-              <div className="relative aspect-[16/8] bg-slate-100">
+              <div className="relative aspect-16/8 bg-slate-100">
                 <img
-                  src={event.coverImage}
+                  src={`http://localhost:8000${event.image}`}
                   alt={event.title}
                   className="h-full w-full object-cover"
                 />
@@ -248,7 +247,7 @@ export default function EventDetailsPage({
                 </h2>
 
                 <p className="mt-3 text-sm leading-7 text-slate-600">
-                  {event.description}
+                  {event.short_description}
                 </p>
               </div>
             </section>
@@ -309,7 +308,7 @@ export default function EventDetailsPage({
                   </h3>
 
                   <div className="mt-4 whitespace-pre-line text-sm leading-8 text-slate-600">
-                    {event.content}
+                    {event.description}
                   </div>
                 </div>
 
@@ -337,7 +336,7 @@ export default function EventDetailsPage({
                   </h2>
 
                   <p className="mt-1 text-xs text-slate-400">
-                    {allGalleryImages.length}{" "}
+                    {event.photos ? event.photos : allGalleryImages.length}{" "}
                     {allGalleryImages.length === 1 ? "photo" : "photos"}
                   </p>
                 </div>
@@ -370,7 +369,7 @@ export default function EventDetailsPage({
                           className="h-full w-full"
                         >
                           <img
-                            src={image}
+                            src={`http://localhost:8000${image}`}
                             alt={`${event.title} gallery ${index + 1}`}
                             className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                           />
@@ -388,7 +387,7 @@ export default function EventDetailsPage({
                     ))}
                   </div>
                 ) : (
-                  <div className="flex min-h-[260px] flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 text-center">
+                  <div className="flex min-h-65 flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 px-6 text-center">
                     <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-slate-400 shadow-sm">
                       <Camera size={24} />
                     </div>
@@ -454,7 +453,7 @@ export default function EventDetailsPage({
 
                   <span className="flex items-center gap-1.5 text-sm font-bold text-slate-800">
                     <Camera size={15} />
-                    {allGalleryImages.length}
+                    {event.photos ? event.photos : allGalleryImages.length}
                   </span>
                 </div>
               </div>

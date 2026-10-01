@@ -1,86 +1,11 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowRight,
-  CalendarDays,
-  Camera,
-  CheckCircle2,
-  Clock3,
-  Edit3,
-  MapPin,
-  MoreVertical,
-  Plus,
-  Search,
-  Trash2,
-  Users,
-} from "lucide-react";
+import {ArrowRight, CalendarDays, Camera, CheckCircle2, Clock3, Edit3, MapPin, MoreVertical, Plus, Search, Trash2, Users, } from "lucide-react";
+import axios from "axios";
 
 type EventStatus = "upcoming" | "past";
-
-type Event = {
-  id: number;
-  title: string;
-  slug: string;
-  category: string;
-  date: string;
-  time: string;
-  location: string;
-  description: string;
-  status: EventStatus;
-  attendees: number;
-  photos: number;
-  image: string;
-};
-
-const initialEvents: Event[] = [
-  {
-    id: 1,
-    title: "WiseGen Youth Conference",
-    slug: "wisegen-youth-conference",
-    category: "Youth Conference",
-    date: "October 24, 2026",
-    time: "10:00 AM",
-    location: "Venue to be announced",
-    description:
-      "A special gathering designed to help young people grow in faith, wisdom, character, and purpose.",
-    status: "upcoming",
-    attendees: 0,
-    photos: 0,
-    image: "/events/youth-conference.jpg",
-  },
-  {
-    id: 2,
-    title: "Faith & Purpose Conversation",
-    slug: "faith-purpose-conversation",
-    category: "Faith & Growth",
-    date: "November 14, 2026",
-    time: "4:00 PM",
-    location: "Venue to be announced",
-    description:
-      "An interactive conversation about faith, identity, purpose, relationships, and navigating life as a young person.",
-    status: "upcoming",
-    attendees: 0,
-    photos: 0,
-    image: "/events/faith-purpose.jpg",
-  },
-  {
-    id: 3,
-    title: "WiseGen Mentoring Meeting",
-    slug: "wisegen-mentoring-meeting",
-    category: "Mentoring",
-    date: "May 18, 2026",
-    time: "4:00 PM",
-    location: "WiseGen Meeting Venue",
-    description:
-      "A meaningful time of fellowship, biblical teaching, mentoring, conversations, and practical guidance.",
-    status: "past",
-    attendees: 28,
-    photos: 16,
-    image: "/events/mentoring-meeting.jpg",
-  },
-];
 
 const categories = [
   "All Categories",
@@ -92,11 +17,48 @@ const categories = [
 ];
 
 export default function EventsPage() {
-  const [events, setEvents] = useState<Event[]>(initialEvents);
+
+  interface Event {
+    id: number;
+    event_id: number;
+    title: string;
+    slug: string;
+    category: string;
+    date: string;
+    time: string;
+    location: string;
+    description: string;
+    status: EventStatus;
+    attendees: number;
+    photos: number;
+    image: string;
+  }
+
+  const [events, setEvents] = useState<Event[]>([]);
   const [activeTab, setActiveTab] = useState<EventStatus>("upcoming");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("All Categories");
   const [openMenu, setOpenMenu] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function fetchEvents() {
+      try{
+        const url = "http://localhost:8000/api/events";
+        const response = await axios.get(url, {withCredentials: true});
+
+        console.log(response.data);
+
+        if (response.data.status === "success"){
+          setEvents(response.data.events);
+        }
+      }catch (error) {
+        if (axios.isAxiosError(error)){
+          console.log(error.response?.data);
+        }
+      }
+    }
+    fetchEvents();
+  },[])
 
   const filteredEvents = useMemo(() => {
     return events.filter((event) => {
@@ -298,7 +260,7 @@ export default function EventsPage() {
                       {/* Image */}
                       <div className="relative h-56 shrink-0 overflow-hidden bg-slate-100 sm:h-auto sm:w-48">
                         <img
-                          src={event.image}
+                          src={`http://localhost:8000${event.image}`}
                           alt={event.title}
                           className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                         />

@@ -1,25 +1,57 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
+import axios from "axios";
+import {useRouter} from "next/navigation";
 
 export default function SignInPage() {
+
+  const router = useRouter();
+
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [error, setError] = useState<string>("");
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async () => {
 
-    // Connect your authentication API here later.
-    console.log({
-      email,
-      password,
-      rememberMe,
-    });
-  };
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const url = "http://localhost:8000/api/login";
+    
+    if (!email || !password) {
+      setError("Please fill in both email and password fields.");
+      return;
+    }
+
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    setError("");
+    
+    try{
+      const response = await axios.post(url, {email: email, password: password}, {
+        headers: {
+          "Content-Type": "application/json",
+        },withCredentials: true
+      })
+
+      if (response.data.status === "success") {
+        router.push("/dashboard");
+      }else{
+        setError(response.data.message);
+      }
+    }catch(error){
+        if (axios.isAxiosError(error)) {
+          console.log(error.response)
+      }
+    };
+  }
+    
 
   return (
     <>
@@ -108,8 +140,13 @@ export default function SignInPage() {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+            <form onSubmit={(e) => e.preventDefault()} className="mt-8 space-y-5">
               {/* Email */}
+              <div className={`w-full h-max py-2 text-center text-sm bg-red-600 text-white rounded
+                ${error ? "block" : "hidden"}
+                `}>
+                {error}
+              </div>
               <div>
                 <label
                   htmlFor="email"
@@ -130,8 +167,6 @@ export default function SignInPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="admin@example.com"
-                    autoComplete="email"
-                    required
                     className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-amber-400 focus:ring-4 focus:ring-amber-400/10"
                   />
                 </div>
@@ -167,8 +202,6 @@ export default function SignInPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    autoComplete="current-password"
-                    required
                     className="w-full rounded-xl border border-slate-200 bg-white py-3.5 pl-11 pr-12 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-amber-400 focus:ring-4 focus:ring-amber-400/10"
                   />
 
@@ -208,6 +241,7 @@ export default function SignInPage() {
               {/* Submit */}
               <button
                 type="submit"
+                onClick={handleSubmit}
                 className="group flex w-full items-center justify-center gap-2 rounded-xl bg-slate-950 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-amber-400 hover:text-slate-950"
               >
                 Sign in
