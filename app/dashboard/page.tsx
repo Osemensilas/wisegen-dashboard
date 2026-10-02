@@ -3,26 +3,28 @@
 import Link from "next/link";
 import {ArrowRight, CalendarDays, ChevronRight, Clock3, FileText, Image as ImageIcon, Plus, Users } from "lucide-react";
 import Header from "@/components/header";
+import {useState, useEffect} from "react";
+import axios from "axios";
 
 const stats = [
-  {
-    title: "Members",
-    value: "0",
-    description: "Registered community members",
-    icon: Users,
-  },
+  // {
+  //   title: "Members",
+  //   value: "0",
+  //   description: "Registered community members",
+  //   icon: Users,
+  // },
   {
     title: "Upcoming Events",
     value: "0",
     description: "Events currently scheduled",
     icon: CalendarDays,
   },
-  {
-    title: "News Articles",
-    value: "0",
-    description: "Published articles",
-    icon: FileText,
-  },
+  // {
+  //   title: "News Articles",
+  //   value: "0",
+  //   description: "Published articles",
+  //   icon: FileText,
+  // },
   {
     title: "Past Events",
     value: "0",
@@ -38,27 +40,91 @@ const quickActions = [
     href: "/dashboard/events/create",
     icon: CalendarDays,
   },
-  {
-    title: "Write News",
-    description: "Publish a new article",
-    href: "/dashboard/news/create",
-    icon: FileText,
-  },
-  {
-    title: "View Members",
-    description: "Manage community members",
-    href: "/dashboard/members",
-    icon: Users,
-  },
-  {
-    title: "Event Gallery",
-    description: "Manage event photos",
-    href: "/dashboard/gallery",
-    icon: ImageIcon,
-  },
+  // {
+  //   title: "Write News",
+  //   description: "Publish a new article",
+  //   href: "/dashboard/news/create",
+  //   icon: FileText,
+  // },
+  // {
+  //   title: "View Members",
+  //   description: "Manage community members",
+  //   href: "/dashboard/members",
+  //   icon: Users,
+  // },
+  // {
+  //   title: "Event Gallery",
+  //   description: "Manage event photos",
+  //   href: "/dashboard/gallery",
+  //   icon: ImageIcon,
+  // },
 ];
 
+type EventStatus = "upcoming" | "past";
+
 export default function DashboardPage() {
+
+  interface Event {
+    id: number;
+    event_id: number;
+    title: string;
+    slug: string;
+    category: string;
+    date: string;
+    time: string;
+    location: string;
+    description: string;
+    status: EventStatus;
+    attendees: number;
+    photos: number;
+    image: string;
+  }
+
+  const [events, setEvents] = useState<Event[]>([]);
+
+  useEffect(() => {
+      async function fetchEvents() {
+        try{
+          const url = "http://localhost:8000/api/events";
+          const response = await axios.get(url, {withCredentials: true});
+  
+          console.log(response.data);
+  
+          if (response.data.status === "success"){
+            setEvents(response.data.events);
+          }
+        }catch (error) {
+          if (axios.isAxiosError(error)){
+            console.log(error.response?.data);
+          }
+        }
+      }
+      fetchEvents();
+    },[])
+
+    const upcomingEvents = events.filter(
+      (event) => event.status === "upcoming"
+    );
+
+    const pastEvents = events.filter(
+      (event) => event.status === "past"
+    );
+
+    const dashboardStats = [
+      {
+        title: "Upcoming Events",
+        value: upcomingEvents.length,
+        description: "Events currently scheduled",
+        icon: CalendarDays,
+      },
+      {
+        title: "Past Events",
+        value: pastEvents.length,
+        description: "Events in the archive",
+        icon: Clock3,
+      },
+    ];
+
   return (
     <main className="min-h-screen bg-[#f8f6f0]">
       {/* Header */}
@@ -97,7 +163,7 @@ export default function DashboardPage() {
         {/* Stats */}
         <section className="mt-8">
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {stats.map((stat) => {
+            {dashboardStats.map((stat) => {
               const Icon = stat.icon;
 
               return (
@@ -235,27 +301,85 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          <div className="flex min-h-[180px] flex-col items-center justify-center px-6 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
-              <CalendarDays size={22} />
+          {upcomingEvents.length > 0 ? (
+            <div className="divide-y divide-slate-100">
+              {upcomingEvents.slice(0, 5).map((event) => (
+                <div
+                  key={event.id}
+                  className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center"
+                >
+                  {/* Event Image */}
+                  <div className="h-24 w-full shrink-0 overflow-hidden rounded-xl bg-slate-100 sm:h-20 sm:w-28">
+                    <img
+                      src={`http://localhost:8000${event.image}`}
+                      alt={event.title}
+                      className="h-full w-full object-cover"
+                    />
+                  </div>
+
+                  {/* Event Information */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-amber-700">
+                        {event.category}
+                      </span>
+
+                      <span className="rounded-full bg-green-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-green-700">
+                        Upcoming
+                      </span>
+                    </div>
+
+                    <h3 className="mt-2 truncate text-base font-black text-slate-950">
+                      {event.title}
+                    </h3>
+
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-400">
+                      <span className="flex items-center gap-1.5">
+                        <CalendarDays size={14} />
+                        {event.date}
+                      </span>
+
+                      <span className="flex items-center gap-1.5">
+                        <Clock3 size={14} />
+                        {event.time}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* View Event */}
+                  <Link
+                    href={`/dashboard/events/${event.id}`}
+                    className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-700 transition hover:border-amber-400 hover:bg-amber-50 hover:text-slate-950"
+                  >
+                    View
+                    <ArrowRight size={14} />
+                  </Link>
+                </div>
+              ))}
             </div>
+          ) : (
+            <div className="flex min-h-[180px] flex-col items-center justify-center px-6 text-center">
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-slate-100 text-slate-400">
+                <CalendarDays size={22} />
+              </div>
 
-            <p className="mt-4 text-sm font-bold text-slate-700">
-              No upcoming events
-            </p>
+              <p className="mt-4 text-sm font-bold text-slate-700">
+                No upcoming events
+              </p>
 
-            <p className="mt-1 text-xs text-slate-400">
-              Create an event to see it here.
-            </p>
+              <p className="mt-1 text-xs text-slate-400">
+                Create an event to see it here.
+              </p>
 
-            <Link
-              href="/dashboard/events/create"
-              className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-amber-600 hover:text-amber-700"
-            >
-              <Plus size={15} />
-              Create Event
-            </Link>
-          </div>
+              <Link
+                href="/dashboard/events/create"
+                className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-amber-600 hover:text-amber-700"
+              >
+                <Plus size={15} />
+                Create Event
+              </Link>
+            </div>
+          )}
         </section>
       </div>
     </main>
