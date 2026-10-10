@@ -150,7 +150,7 @@ export default function DashboardPage() {
             </p>
 
             <Link
-              href="/"
+              href="https://wisegen.ca"
               target="_blank"
               className="mt-6 inline-flex items-center gap-2 rounded-full bg-amber-400 px-5 py-3 text-sm font-bold text-slate-950 transition hover:bg-amber-300"
             >
