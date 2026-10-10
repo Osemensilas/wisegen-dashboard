@@ -85,7 +85,7 @@ export default function DashboardPage() {
   useEffect(() => {
       async function fetchEvents() {
         try{
-          const url = "http://localhost:8000/api/events";
+          const url = "https://www.backend.wisegen.ca/api/events";
           const response = await axios.get(url, {withCredentials: true});
   
           console.log(response.data);

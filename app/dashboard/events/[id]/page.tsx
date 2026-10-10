@@ -38,7 +38,7 @@ export default function EventDetailsPage() {
     async function fetchEvents() {
       try {
         const response = await axios.get(
-          "http://localhost:8000/api/events",
+          "https://www.backend.wisegen.ca/api/events",
           {
             withCredentials: true,
           }
@@ -101,7 +101,7 @@ export default function EventDetailsPage() {
       setUploading(true);
 
       const response = await axios.post(
-        "http://localhost:8000/api/gallery",
+        "https://www.backend.wisegen.ca/api/gallery",
         formData,
         {
           withCredentials: true,

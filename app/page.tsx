@@ -19,7 +19,7 @@ export default function SignInPage() {
   const handleSubmit = async () => {
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const url = "http://localhost:8000/api/login";
+    const url = "https://www.backend.wisegen.ca/api/login";
     
     if (!email || !password) {
       setError("Please fill in both email and password fields.");

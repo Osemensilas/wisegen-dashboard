@@ -128,7 +128,7 @@ export default function CreateEventPage() {
     setIsSubmitting(true);
 
     try {
-      const url = "http://localhost:8000/api/create-event";
+      const url = "https://www.backend.wisegen.ca/api/create-event";
 
       const response = await axios.post(url, formData, {
         headers: {
